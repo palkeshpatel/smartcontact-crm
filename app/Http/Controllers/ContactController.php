@@ -37,8 +37,15 @@ class ContactController extends Controller
 
         $contacts = $query->orderBy('created_at', 'desc')->paginate(10);
 
+        // Transform contacts to include custom_fields for frontend compatibility
+        $transformedContacts = $contacts->getCollection()->map(function ($contact) {
+            $contactArray = $contact->toArray();
+            $contactArray['custom_fields'] = $contact->customFields->toArray();
+            return $contactArray;
+        });
+
         return $this->successResponse('Contacts retrieved successfully', [
-            'contacts' => $contacts->items(),
+            'contacts' => $transformedContacts,
             'pagination' => [
                 'current_page' => $contacts->currentPage(),
                 'last_page' => $contacts->lastPage(),
@@ -101,7 +108,11 @@ class ContactController extends Controller
             return $this->errorResponse('Contact not found', null, 404);
         }
 
-        return $this->successResponse('Contact retrieved successfully', $contact);
+        // Transform contact to include custom_fields for frontend compatibility
+        $contactArray = $contact->toArray();
+        $contactArray['custom_fields'] = $contact->customFields->toArray();
+
+        return $this->successResponse('Contact retrieved successfully', $contactArray);
     }
 
     public function update(Request $request, $id)

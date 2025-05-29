@@ -34,6 +34,15 @@
             padding: 10px;
             margin-bottom: 10px;
         }
+
+        .custom-field-display {
+            background: #e3f2fd;
+            border-radius: 3px;
+            padding: 2px 6px;
+            margin: 2px 0;
+            display: inline-block;
+            font-size: 0.8em;
+        }
     </style>
 </head>
 
@@ -99,16 +108,22 @@
                     <h5 class="modal-title">Add Contact</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="contactForm" enctype="multipart/form-data">
+                <form id="contactForm" enctype="multipart/form-data" novalidate>
                     <div class="modal-body">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Name *</label>
                                 <input type="text" name="name" class="form-control" required>
+                                <div class="invalid-feedback">
+                                    Please provide a valid name.
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email *</label>
                                 <input type="email" name="email" class="form-control" required>
+                                <div class="invalid-feedback">
+                                    Please provide a valid email.
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Phone</label>
@@ -118,7 +133,8 @@
                                 <label class="form-label">Gender</label>
                                 <div class="mt-2">
                                     <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="gender" value="male">
+                                        <input class="form-check-input" type="radio" name="gender" value="male"
+                                            checked>
                                         <label class="form-check-label">Male</label>
                                     </div>
                                     <div class="form-check form-check-inline">
@@ -233,9 +249,12 @@
 
                     let customFieldsHtml = '';
                     if (contact.custom_fields && contact.custom_fields.length > 0) {
-                        customFieldsHtml = contact.custom_fields.map(field =>
-                            `<small class="text-muted d-block">${field.field_name}: ${field.field_value}</small>`
-                        ).join('');
+                        customFieldsHtml = '<div class="mt-2">';
+                        contact.custom_fields.forEach(field => {
+                            customFieldsHtml +=
+                                `<span class="custom-field-display me-1">${field.field_name}: ${field.field_value}</span>`;
+                        });
+                        customFieldsHtml += '</div>';
                     }
 
                     html += `
@@ -326,9 +345,23 @@
                 $('#mergeBtn').prop('disabled', selectedContacts.length !== 2);
             };
 
+            // Bootstrap form validation
+            function validateForm(form) {
+                form.classList.add('was-validated');
+                return form.checkValidity();
+            }
+
             // Contact form submission
             $('#contactForm').on('submit', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
+
+                const form = this;
+
+                // Bootstrap validation
+                if (!validateForm(form)) {
+                    return;
+                }
 
                 const formData = new FormData(this);
                 const customFields = {};
@@ -349,7 +382,6 @@
 
                 const contactId = $('#contactForm').data('contact-id');
                 const url = contactId ? `/contacts/${contactId}` : '/contacts';
-                const method = contactId ? 'PUT' : 'POST';
 
                 if (contactId) {
                     formData.append('_method', 'PUT');
@@ -364,8 +396,7 @@
                     success: function(response) {
                         if (response.success) {
                             $('#contactModal').modal('hide');
-                            $('#contactForm')[0].reset();
-                            $('#customFields').empty();
+                            resetForm();
                             loadContacts(currentPage);
                             showAlert(response.message, 'success');
                         }
@@ -373,11 +404,13 @@
                     error: function(xhr) {
                         const response = xhr.responseJSON;
                         if (response.errors) {
-                            let errorMsg = '';
-                            Object.values(response.errors).forEach(errors => {
-                                errors.forEach(error => errorMsg += error + '<br>');
+                            // Show validation errors
+                            Object.keys(response.errors).forEach(field => {
+                                const input = $(`[name="${field}"]`);
+                                input.addClass('is-invalid');
+                                input.siblings('.invalid-feedback').text(response
+                                    .errors[field][0]);
                             });
-                            showAlert(errorMsg, 'danger');
                         } else {
                             showAlert(response.message || 'An error occurred', 'danger');
                         }
@@ -416,14 +449,17 @@
                         if (response.success) {
                             const contact = response.data;
 
-                            // Fill form fields
-                            $('#contactForm')[0].reset();
+                            // Reset form and validation
+                            resetForm();
                             $('#contactForm').data('contact-id', id);
                             $('.modal-title').text('Edit Contact');
 
+                            // Fill form fields
                             $('input[name="name"]').val(contact.name);
                             $('input[name="email"]').val(contact.email);
                             $('input[name="phone"]').val(contact.phone);
+
+                            // Set gender radio button
                             if (contact.gender) {
                                 $(`input[name="gender"][value="${contact.gender}"]`).prop('checked',
                                     true);
@@ -431,7 +467,7 @@
 
                             // Load custom fields
                             $('#customFields').empty();
-                            if (contact.custom_fields) {
+                            if (contact.custom_fields && contact.custom_fields.length > 0) {
                                 contact.custom_fields.forEach(field => {
                                     const fieldHtml = `
                                         <div class="custom-field">
@@ -456,6 +492,10 @@
 
                             $('#contactModal').modal('show');
                         }
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        showAlert(response.message || 'Error loading contact', 'danger');
                     }
                 });
             };
@@ -579,12 +619,27 @@
                 loadContacts(currentPage);
             });
 
-            // Reset modal on close
-            $('#contactModal').on('hidden.bs.modal', function() {
-                $('#contactForm')[0].reset();
+            // Reset form function
+            function resetForm() {
+                const form = document.getElementById('contactForm');
+                form.reset();
+                form.classList.remove('was-validated');
+                $('.form-control').removeClass('is-invalid is-valid');
                 $('#contactForm').removeData('contact-id');
                 $('.modal-title').text('Add Contact');
                 $('#customFields').empty();
+                // Set default male selection
+                $('input[name="gender"][value="male"]').prop('checked', true);
+            }
+
+            // Reset modal on close
+            $('#contactModal').on('hidden.bs.modal', function() {
+                resetForm();
+            });
+
+            // Remove validation classes on input
+            $('.form-control').on('input', function() {
+                $(this).removeClass('is-invalid');
             });
 
             // Show alert
