@@ -129,7 +129,9 @@ class ContactController extends Controller
             'phone' => 'nullable|string|max:20',
             'gender' => 'nullable|in:male,female,other',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'additional_file' => 'nullable|file|max:5120'
+            'additional_file' => 'nullable|file|max:5120',
+            'remove_profile_image' => 'nullable|in:0,1',
+            'remove_additional_file' => 'nullable|in:0,1'
         ]);
 
         if ($validator->fails()) {
@@ -141,14 +143,26 @@ class ContactController extends Controller
 
             $data = $request->only(['name', 'email', 'phone', 'gender']);
 
-            if ($request->hasFile('profile_image')) {
+            // Handle profile image removal
+            if ($request->input('remove_profile_image') == '1') {
+                if ($contact->profile_image) {
+                    Storage::disk('public')->delete($contact->profile_image);
+                }
+                $data['profile_image'] = null;
+            } elseif ($request->hasFile('profile_image')) {
                 if ($contact->profile_image) {
                     Storage::disk('public')->delete($contact->profile_image);
                 }
                 $data['profile_image'] = $request->file('profile_image')->store('profile_images', 'public');
             }
 
-            if ($request->hasFile('additional_file')) {
+            // Handle additional file removal
+            if ($request->input('remove_additional_file') == '1') {
+                if ($contact->additional_file) {
+                    Storage::disk('public')->delete($contact->additional_file);
+                }
+                $data['additional_file'] = null;
+            } elseif ($request->hasFile('additional_file')) {
                 if ($contact->additional_file) {
                     Storage::disk('public')->delete($contact->additional_file);
                 }
@@ -166,7 +180,12 @@ class ContactController extends Controller
             }
 
             DB::commit();
-            return $this->successResponse('Contact updated successfully', $contact->load('customFields'));
+
+            // Transform contact to include custom_fields for frontend compatibility
+            $contactArray = $contact->fresh()->load('customFields')->toArray();
+            $contactArray['custom_fields'] = $contact->customFields->toArray();
+
+            return $this->successResponse('Contact updated successfully', $contactArray);
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->errorResponse('Failed to update contact: ' . $e->getMessage());

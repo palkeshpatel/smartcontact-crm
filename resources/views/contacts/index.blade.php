@@ -149,11 +149,47 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Profile Image</label>
-                                <input type="file" name="profile_image" class="form-control" accept="image/*">
+                                <div id="profileImageSection">
+                                    <input type="file" name="profile_image" class="form-control"
+                                        accept="image/*">
+                                    <div id="currentProfileImage" class="mt-2" style="display: none;">
+                                        <div class="d-flex align-items-center">
+                                            <img id="profileImagePreview" src="" alt="Current Profile"
+                                                class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                                            <div class="ms-2">
+                                                <small class="text-muted d-block">Current Image</small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    onclick="removeProfileImage()">
+                                                    <i class="fas fa-trash me-1"></i>Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="remove_profile_image" value="0">
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Additional File</label>
-                                <input type="file" name="additional_file" class="form-control">
+                                <div id="additionalFileSection">
+                                    <input type="file" name="additional_file" class="form-control">
+                                    <div id="currentAdditionalFile" class="mt-2" style="display: none;">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-file fa-2x text-secondary"></i>
+                                            <div class="ms-2">
+                                                <small class="text-muted d-block">Current File</small>
+                                                <a id="additionalFileLink" href="" target="_blank"
+                                                    class="btn btn-sm btn-outline-primary me-2">
+                                                    <i class="fas fa-download me-1"></i>Download
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    onclick="removeAdditionalFile()">
+                                                    <i class="fas fa-trash me-1"></i>Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="remove_additional_file" value="0">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -465,6 +501,22 @@
                                     true);
                             }
 
+                            // Show existing profile image
+                            if (contact.profile_image) {
+                                $('#profileImagePreview').attr('src',
+                                    `/storage/${contact.profile_image}`);
+                                $('#currentProfileImage').show();
+                                $('input[name="remove_profile_image"]').val('0');
+                            }
+
+                            // Show existing additional file
+                            if (contact.additional_file) {
+                                $('#additionalFileLink').attr('href',
+                                    `/storage/${contact.additional_file}`);
+                                $('#currentAdditionalFile').show();
+                                $('input[name="remove_additional_file"]').val('0');
+                            }
+
                             // Load custom fields
                             $('#customFields').empty();
                             if (contact.custom_fields && contact.custom_fields.length > 0) {
@@ -630,6 +682,11 @@
                 $('#customFields').empty();
                 // Set default male selection
                 $('input[name="gender"][value="male"]').prop('checked', true);
+                // Hide file sections
+                $('#currentProfileImage').hide();
+                $('#currentAdditionalFile').hide();
+                $('input[name="remove_profile_image"]').val('0');
+                $('input[name="remove_additional_file"]').val('0');
             }
 
             // Reset modal on close
@@ -657,6 +714,24 @@
                     $('.alert').alert('close');
                 }, 5000);
             }
+
+            // Remove profile image function
+            window.removeProfileImage = function() {
+                if (confirm('Are you sure you want to remove the profile image?')) {
+                    $('#currentProfileImage').hide();
+                    $('input[name="remove_profile_image"]').val('1');
+                    $('input[name="profile_image"]').val('');
+                }
+            };
+
+            // Remove additional file function
+            window.removeAdditionalFile = function() {
+                if (confirm('Are you sure you want to remove the additional file?')) {
+                    $('#currentAdditionalFile').hide();
+                    $('input[name="remove_additional_file"]').val('1');
+                    $('input[name="additional_file"]').val('');
+                }
+            };
 
             // Initial load
             loadContacts();
