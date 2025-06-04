@@ -43,6 +43,30 @@
             display: inline-block;
             font-size: 0.8em;
         }
+
+        .merged-data {
+            background: #f8fff8;
+            border-left: 3px solid #28a745;
+            padding-left: 8px;
+            margin: 2px 0;
+        }
+
+        .contact-card.border-success {
+            border-width: 2px !important;
+            box-shadow: 0 2px 6px rgba(40, 167, 69, 0.2);
+        }
+
+        .badge.bg-info {
+            background-color: #17a2b8 !important;
+        }
+
+        .badge.bg-primary {
+            background-color: #007bff !important;
+        }
+
+        .badge.bg-success {
+            background-color: #28a745 !important;
+        }
     </style>
 </head>
 
@@ -283,6 +307,35 @@
                         `/storage/${contact.profile_image}` :
                         'https://via.placeholder.com/60x60?text=No+Image';
 
+                    // Build additional emails display
+                    let additionalEmailsHtml = '';
+                    if (contact.additional_emails && contact.additional_emails.length > 0) {
+                        contact.additional_emails.forEach(email => {
+                            additionalEmailsHtml += `
+                                <p class="card-text mb-1">
+                                    <small class="text-info">
+                                        <i class="fas fa-envelope me-1"></i>${email} <span class="badge bg-info text-white" style="font-size: 0.6em;">merged</span>
+                                    </small>
+                                </p>
+                            `;
+                        });
+                    }
+
+                    // Build additional phones display
+                    let additionalPhonesHtml = '';
+                    if (contact.additional_phones && contact.additional_phones.length > 0) {
+                        contact.additional_phones.forEach(phone => {
+                            additionalPhonesHtml += `
+                                <p class="card-text mb-1">
+                                    <small class="text-info">
+                                        <i class="fas fa-phone me-1"></i>${phone} <span class="badge bg-info text-white" style="font-size: 0.6em;">merged</span>
+                                    </small>
+                                </p>
+                            `;
+                        });
+                    }
+
+                    // Build custom fields display
                     let customFieldsHtml = '';
                     if (contact.custom_fields && contact.custom_fields.length > 0) {
                         customFieldsHtml = '<div class="mt-2">';
@@ -293,23 +346,58 @@
                         customFieldsHtml += '</div>';
                     }
 
+                    // Check if this contact has merged data
+                    const hasMergedData = (contact.additional_emails && contact.additional_emails.length >
+                            0) ||
+                        (contact.additional_phones && contact.additional_phones.length > 0);
+
+                    const mergedIndicator = hasMergedData ?
+                        `<span class="badge bg-success text-white me-2" style="font-size: 0.7em;">
+                            <i class="fas fa-code-merge me-1"></i>Merged Contact
+                        </span>` : '';
+
                     html += `
                         <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card contact-card h-100">
+                            <div class="card contact-card h-100 ${hasMergedData ? 'border-success' : ''}">
                                 <div class="card-body">
                                     <div class="d-flex align-items-start">
                                         <input type="checkbox" class="merge-checkbox me-3 mt-1"
                                                value="${contact.id}" onchange="toggleMergeSelection(this)">
                                         <img src="${profileImg}" alt="Profile" class="profile-img rounded-circle me-3">
                                         <div class="flex-grow-1">
-                                            <h6 class="card-title mb-1">${contact.name}</h6>
+                                            <div class="d-flex align-items-center mb-1">
+                                                <h6 class="card-title mb-0 me-2">${contact.name}</h6>
+                                                ${mergedIndicator}
+                                            </div>
+
+                                            <!-- Primary Email -->
                                             <p class="card-text mb-1">
                                                 <small class="text-muted">
                                                     <i class="fas fa-envelope me-1"></i>${contact.email}
+                                                    ${contact.additional_emails && contact.additional_emails.length > 0 ? '<span class="badge bg-primary text-white" style="font-size: 0.6em;">primary</span>' : ''}
                                                 </small>
                                             </p>
-                                            ${contact.phone ? `<p class="card-text mb-1"><small class="text-muted"><i class="fas fa-phone me-1"></i>${contact.phone}</small></p>` : ''}
+
+                                            <!-- Additional Emails from Merged Contacts -->
+                                            ${additionalEmailsHtml}
+
+                                            <!-- Primary Phone -->
+                                            ${contact.phone ? `
+                                                            <p class="card-text mb-1">
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-phone me-1"></i>${contact.phone}
+                                                                    ${contact.additional_phones && contact.additional_phones.length > 0 ? '<span class="badge bg-primary text-white" style="font-size: 0.6em;">primary</span>' : ''}
+                                                                </small>
+                                                            </p>
+                                                        ` : ''}
+
+                                            <!-- Additional Phones from Merged Contacts -->
+                                            ${additionalPhonesHtml}
+
+                                            <!-- Gender -->
                                             ${contact.gender ? `<p class="card-text mb-1"><small class="text-muted"><i class="fas fa-user me-1"></i>${contact.gender}</small></p>` : ''}
+
+                                            <!-- Custom Fields -->
                                             ${customFieldsHtml}
                                         </div>
                                         <div class="dropdown">
